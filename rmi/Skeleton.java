@@ -50,7 +50,7 @@ public class Skeleton<T>
 
     protected ServerSocket skeleton_server_socket; //Used by Skeleton Server to listen for Clients
 
-    private ListenerThread listener;
+    private ListenerThread<T> listener;
     protected final List<ServiceThread> service_thread_list = new LinkedList<ServiceThread>(); //List for All Service Threads Created
 
     /* -------- Helper Functions -------- */
@@ -89,195 +89,195 @@ public class Skeleton<T>
         return true;
     }
 
-    /**
-     * ListenerThread is the listening thread at Skeleton server side, accepting connections from client(Stub)
-     * @ Chenxuan Weng & Zeyu Sun
-     */
-    private  class ListenerThread extends Thread{
-        private ServerSocket socket;
+//    /**
+//     * ListenerThread is the listening thread at Skeleton server side, accepting connections from client(Stub)
+//     * @ Chenxuan Weng & Zeyu Sun
+//     */
+//    private  class ListenerThread extends Thread{
+//        private ServerSocket socket;
+//
+//        private boolean stop_status;
+//
+//        public ListenerThread(ServerSocket skeleton_server_socket){
+//            this.socket = skeleton_server_socket;
+//            stop_status = false; // Skeleton's stop method has not been called
+//        }
+//
+//        public synchronized void terminate() {
+//            try {
+//                if(!this.socket.isClosed()){
+//                    this.socket.close();
+//                }
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        /* One of the way to create a new thread of execution is
+//           to declare a class to be a subclass of Thread.
+//           This subclass should override the run method of class Thread.
+//           An instance of the subclass can then be allocated and started.
+//         */
+//
+//        @Override
+//        public void run(){
+//            try{
+//                // Block of code with multiple exit points
+//                /* Run the Skeleton MultiThread Server */
+//                while(true){
+//                    try{
+//                        /* Listening for connections (Method Call)
+//                           And Create Service Thread to handle the Remote Method Call When connections areaccepted.
+//                         */
+//                        Socket connection = this.socket.accept();
+//                        ServiceThread<T> service_thread = new ServiceThread(connection, this);
+//                        service_thread.start();
+//                    }
+//                    catch(Exception e){
+//                        if(stop_status == true){
+//                            /* Skeleton's 'stop' is called, the Skeleton Server needs to stop
+//                             * listener Thread need to exit due to call to 'stop'
+//                             * */
+//                            break;
+//                        }
+//                        /* Exceptions may occur at the top level in the listening and service threads. */
+//                        else if(listen_error(e)){
+//                            /* An exception occurs at the top level in the listening thread */
+//                            /* The Server Needs to Resume Accepting Connections Now */
+//                            continue;
+//                        }
+//                        else{
+//                            // Skeleton Server Has to Stop
+//                            // The Listener Thread needs to exits
+//                            stopped(e);
+//                            break;
+//                        }
+//                    }
+//                }
+//            }
+//            finally {
+//                // Block of code that is always executed when the try block is exited,
+//                // no matter how the try block is exited
+//                /* Close the Socket */
+//                try {
+//                    if(!this.socket.isClosed()){
+//                        this.socket.close();
+//                    }
+//                }
+//                catch (IOException e){
+//                    System.out.println("CLose of the Skeleton Server Socket failed!");
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
+//    }
 
-        private boolean stop_status;
-
-        public ListenerThread(ServerSocket skeleton_server_socket){
-            this.socket = skeleton_server_socket;
-            stop_status = false; // Skeleton's stop method has not been called
-        }
-
-        public synchronized void terminate() {
-            try {
-                if(!this.socket.isClosed()){
-                    this.socket.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        /* One of the way to create a new thread of execution is
-           to declare a class to be a subclass of Thread.
-           This subclass should override the run method of class Thread.
-           An instance of the subclass can then be allocated and started.
-         */
-
-        @Override
-        public void run(){
-            try{
-                // Block of code with multiple exit points
-                /* Run the Skeleton MultiThread Server */
-                while(true){
-                    try{
-                        /* Listening for connections (Method Call)
-                           And Create Service Thread to handle the Remote Method Call When connections areaccepted.
-                         */
-                        Socket connection = this.socket.accept();
-                        ServiceThread service_thread = new ServiceThread(connection);
-                        service_thread.start();
-                    }
-                    catch(Exception e){
-                        if(stop_status == true){
-                            /* Skeleton's 'stop' is called, the Skeleton Server needs to stop
-                             * listener Thread need to exit due to call to 'stop'
-                             * */
-                            break;
-                        }
-                        /* Exceptions may occur at the top level in the listening and service threads. */
-                        else if(listen_error(e)){
-                            /* An exception occurs at the top level in the listening thread */
-                            /* The Server Needs to Resume Accepting Connections Now */
-                            continue;
-                        }
-                        else{
-                            // Skeleton Server Has to Stop
-                            // The Listener Thread needs to exits
-                            stopped(e);
-                            break;
-                        }
-                    }
-                }
-            }
-            finally {
-                // Block of code that is always executed when the try block is exited,
-                // no matter how the try block is exited
-                /* Close the Socket */
-                try {
-                    if(!this.socket.isClosed()){
-                        this.socket.close();
-                    }
-                }
-                catch (IOException e){
-                    System.out.println("CLose of the Skeleton Server Socket failed!");
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    /**
-     * Additional Service threads are created when connections are accepted.
-     * These Threads will read and parse method calls(name & arguments) forwarded by Stub Object
-     * (Stub will open a single connection per method call
-     * Then call the correct methods on the server Object implementing Remote Interface
-     * When a method returns, the return value (or exception) is sent over the network to the client
-     */
-    private class ServiceThread extends Thread{
-        private Socket connection;
-
-        /* Register this Service Thread in 'service_thread_list' */
-        public ServiceThread(Socket connection_socket){
-            this.connection = connection_socket;
-            service_thread_list.add(this);
-        }
-        /* override the run method of class Thread */
-        @Override
-        public void run(){
-            /* Arguments & Results Transmition
-             * Serialize the Communication
-             * */
-            ObjectOutputStream out = null;
-            ObjectInputStream in = null;
-
-
-            try{
-                /* Ensure the out stream is created first, and be flushed before creating input stream
-                   To Avoid Deadlock
-                 */
-                out = new ObjectOutputStream(connection.getOutputStream());
-                out.flush();
-                in = new ObjectInputStream(connection.getInputStream());
-                /* Parse Information Regard Method Call */
-                String method_name = (String)in.readObject(); // Name of the Method
-                Class<?>[] args_type = (Class<?>[]) in.readObject(); //Type for each Argument
-                Object[] args = (Object[]) in.readObject(); //Arguments
-
-                /* Retrieve the required method on the server */
-                Method method = remote_interface_c.getMethod(method_name, args_type);
-
-                Class return_type = method.getReturnType();
-
-                /* Invoke the Method
-                 * Invokes the underlying method represented by this Method object(method),
-                 * on the specified object (object implementing remote Interface) with the specified parameters
-                 * */
-                try{
-                    Object return_value = method.invoke(remoteObject, args);
-
-                    /* Return The Method Call Result */
-                    /* ### Just For Now */
-                    out.writeObject("Remote Method Call Succeeded!");
-                    out.writeObject(return_value);
-                }
-                catch (InvocationTargetException e){//(IllegalAccessException | InvocationTargetException e){
-                    /* Send Back the Exception to Client
-                     * If the remote method raises an exception,
-                     * the Stub must raise the same exception,
-                     * */
-                    out.writeObject("Remote Method Call Failed!");
-                    out.writeObject(e.getTargetException());
-                }
-
-            }
-            catch(Exception exception){
-                /* an exception occurs at the top level in a service thread */
-                service_error(new RMIException((exception)));
-            }
-            finally {
-                // executed when the try block is exited
-                /* service method's result has been returned
-                   Close the Serializable Streams
-                   Close the Connection
-                 */
-                service_thread_list.remove(this);
-                try{
-                    if(out != null){
-                        out.flush();
-                        out.close();
-                    }
-                }
-                catch (IOException e){
-                    System.out.println("Out Stream");
-                    e.printStackTrace();
-                }
-                try{
-                    if(in != null){
-                        in.close();
-                    }
-                }
-                catch (IOException e){
-                    System.out.println("In Stream");
-                    e.printStackTrace();
-                }
-                try{
-                    this.connection.close();
-                }
-                catch (IOException e){
-                    System.out.println("Connection Close");
-                    e.printStackTrace();
-                }
-            }
-
-
-        }
-
-    }
+//    /**
+//     * Additional Service threads are created when connections are accepted.
+//     * These Threads will read and parse method calls(name & arguments) forwarded by Stub Object
+//     * (Stub will open a single connection per method call
+//     * Then call the correct methods on the server Object implementing Remote Interface
+//     * When a method returns, the return value (or exception) is sent over the network to the client
+//     */
+//    private class ServiceThread extends Thread{
+//        private Socket connection;
+//
+//        /* Register this Service Thread in 'service_thread_list' */
+//        public ServiceThread(Socket connection_socket){
+//            this.connection = connection_socket;
+//            service_thread_list.add(this);
+//        }
+//        /* override the run method of class Thread */
+//        @Override
+//        public void run(){
+//            /* Arguments & Results Transmition
+//             * Serialize the Communication
+//             * */
+//            ObjectOutputStream out = null;
+//            ObjectInputStream in = null;
+//
+//
+//            try{
+//                /* Ensure the out stream is created first, and be flushed before creating input stream
+//                   To Avoid Deadlock
+//                 */
+//                out = new ObjectOutputStream(connection.getOutputStream());
+//                out.flush();
+//                in = new ObjectInputStream(connection.getInputStream());
+//                /* Parse Information Regard Method Call */
+//                String method_name = (String)in.readObject(); // Name of the Method
+//                Class<?>[] args_type = (Class<?>[]) in.readObject(); //Type for each Argument
+//                Object[] args = (Object[]) in.readObject(); //Arguments
+//
+//                /* Retrieve the required method on the server */
+//                Method method = remote_interface_c.getMethod(method_name, args_type);
+//
+//                Class return_type = method.getReturnType();
+//
+//                /* Invoke the Method
+//                 * Invokes the underlying method represented by this Method object(method),
+//                 * on the specified object (object implementing remote Interface) with the specified parameters
+//                 * */
+//                try{
+//                    Object return_value = method.invoke(remoteObject, args);
+//
+//                    /* Return The Method Call Result */
+//                    /* ### Just For Now */
+//                    out.writeObject("Remote Method Call Succeeded!");
+//                    out.writeObject(return_value);
+//                }
+//                catch (InvocationTargetException e){//(IllegalAccessException | InvocationTargetException e){
+//                    /* Send Back the Exception to Client
+//                     * If the remote method raises an exception,
+//                     * the Stub must raise the same exception,
+//                     * */
+//                    out.writeObject("Remote Method Call Failed!");
+//                    out.writeObject(e.getTargetException());
+//                }
+//
+//            }
+//            catch(Exception exception){
+//                /* an exception occurs at the top level in a service thread */
+//                service_error(new RMIException((exception)));
+//            }
+//            finally {
+//                // executed when the try block is exited
+//                /* service method's result has been returned
+//                   Close the Serializable Streams
+//                   Close the Connection
+//                 */
+//                service_thread_list.remove(this);
+//                try{
+//                    if(out != null){
+//                        out.flush();
+//                        out.close();
+//                    }
+//                }
+//                catch (IOException e){
+//                    System.out.println("Out Stream");
+//                    e.printStackTrace();
+//                }
+//                try{
+//                    if(in != null){
+//                        in.close();
+//                    }
+//                }
+//                catch (IOException e){
+//                    System.out.println("In Stream");
+//                    e.printStackTrace();
+//                }
+//                try{
+//                    this.connection.close();
+//                }
+//                catch (IOException e){
+//                    System.out.println("Connection Close");
+//                    e.printStackTrace();
+//                }
+//            }
+//
+//
+//        }
+//
+//    }
 
     /** Creates a <code>Skeleton</code> with no initial server address. The
         address will be determined by the system when <code>start</code> is
@@ -477,7 +477,7 @@ public class Skeleton<T>
                 skeleton_server_socket = new ServerSocket(skeleton_address.getPort());
             }
 
-            listener = new ListenerThread(skeleton_server_socket);
+            listener = new ListenerThread<T>(skeleton_server_socket, this);
             /* Start Listening Thread */
             listener.start();
 

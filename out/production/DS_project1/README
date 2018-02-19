@@ -3,7 +3,7 @@ MAKEFILE TARGETS
 To compile all Java files, execute
         make
 To run all test cases, run
-        make tests
+        make test
 To package source files into an archive, run
         make archive
 
