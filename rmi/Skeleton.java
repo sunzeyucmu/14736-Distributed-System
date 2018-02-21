@@ -37,7 +37,6 @@ import java.lang.reflect.*;
 public class Skeleton<T>
 {
     /* The Skeleton class's type variable 'T' is corresponding to the remote interface */
-
     /*
         Object representing the class of the interface for which
         the skeleton server is to handle method call requests
@@ -69,7 +68,7 @@ public class Skeleton<T>
      * Check whether interface'smethods are all marked as throwing RMIException.
      * @return true or false
      */
-    private boolean isRemoteInterface(Class<?> c){
+    protected boolean isRemoteInterface(Class<?> c){
         if(!c.isInterface()){ //Determines if the specified Class object represents an interface type
             return false;
         }
@@ -89,195 +88,6 @@ public class Skeleton<T>
         return true;
     }
 
-//    /**
-//     * ListenerThread is the listening thread at Skeleton server side, accepting connections from client(Stub)
-//     * @ Chenxuan Weng & Zeyu Sun
-//     */
-//    private  class ListenerThread extends Thread{
-//        private ServerSocket socket;
-//
-//        private boolean stop_status;
-//
-//        public ListenerThread(ServerSocket skeleton_server_socket){
-//            this.socket = skeleton_server_socket;
-//            stop_status = false; // Skeleton's stop method has not been called
-//        }
-//
-//        public synchronized void terminate() {
-//            try {
-//                if(!this.socket.isClosed()){
-//                    this.socket.close();
-//                }
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//        /* One of the way to create a new thread of execution is
-//           to declare a class to be a subclass of Thread.
-//           This subclass should override the run method of class Thread.
-//           An instance of the subclass can then be allocated and started.
-//         */
-//
-//        @Override
-//        public void run(){
-//            try{
-//                // Block of code with multiple exit points
-//                /* Run the Skeleton MultiThread Server */
-//                while(true){
-//                    try{
-//                        /* Listening for connections (Method Call)
-//                           And Create Service Thread to handle the Remote Method Call When connections areaccepted.
-//                         */
-//                        Socket connection = this.socket.accept();
-//                        ServiceThread<T> service_thread = new ServiceThread(connection, this);
-//                        service_thread.start();
-//                    }
-//                    catch(Exception e){
-//                        if(stop_status == true){
-//                            /* Skeleton's 'stop' is called, the Skeleton Server needs to stop
-//                             * listener Thread need to exit due to call to 'stop'
-//                             * */
-//                            break;
-//                        }
-//                        /* Exceptions may occur at the top level in the listening and service threads. */
-//                        else if(listen_error(e)){
-//                            /* An exception occurs at the top level in the listening thread */
-//                            /* The Server Needs to Resume Accepting Connections Now */
-//                            continue;
-//                        }
-//                        else{
-//                            // Skeleton Server Has to Stop
-//                            // The Listener Thread needs to exits
-//                            stopped(e);
-//                            break;
-//                        }
-//                    }
-//                }
-//            }
-//            finally {
-//                // Block of code that is always executed when the try block is exited,
-//                // no matter how the try block is exited
-//                /* Close the Socket */
-//                try {
-//                    if(!this.socket.isClosed()){
-//                        this.socket.close();
-//                    }
-//                }
-//                catch (IOException e){
-//                    System.out.println("CLose of the Skeleton Server Socket failed!");
-//                    e.printStackTrace();
-//                }
-//            }
-//        }
-//    }
-
-//    /**
-//     * Additional Service threads are created when connections are accepted.
-//     * These Threads will read and parse method calls(name & arguments) forwarded by Stub Object
-//     * (Stub will open a single connection per method call
-//     * Then call the correct methods on the server Object implementing Remote Interface
-//     * When a method returns, the return value (or exception) is sent over the network to the client
-//     */
-//    private class ServiceThread extends Thread{
-//        private Socket connection;
-//
-//        /* Register this Service Thread in 'service_thread_list' */
-//        public ServiceThread(Socket connection_socket){
-//            this.connection = connection_socket;
-//            service_thread_list.add(this);
-//        }
-//        /* override the run method of class Thread */
-//        @Override
-//        public void run(){
-//            /* Arguments & Results Transmition
-//             * Serialize the Communication
-//             * */
-//            ObjectOutputStream out = null;
-//            ObjectInputStream in = null;
-//
-//
-//            try{
-//                /* Ensure the out stream is created first, and be flushed before creating input stream
-//                   To Avoid Deadlock
-//                 */
-//                out = new ObjectOutputStream(connection.getOutputStream());
-//                out.flush();
-//                in = new ObjectInputStream(connection.getInputStream());
-//                /* Parse Information Regard Method Call */
-//                String method_name = (String)in.readObject(); // Name of the Method
-//                Class<?>[] args_type = (Class<?>[]) in.readObject(); //Type for each Argument
-//                Object[] args = (Object[]) in.readObject(); //Arguments
-//
-//                /* Retrieve the required method on the server */
-//                Method method = remote_interface_c.getMethod(method_name, args_type);
-//
-//                Class return_type = method.getReturnType();
-//
-//                /* Invoke the Method
-//                 * Invokes the underlying method represented by this Method object(method),
-//                 * on the specified object (object implementing remote Interface) with the specified parameters
-//                 * */
-//                try{
-//                    Object return_value = method.invoke(remoteObject, args);
-//
-//                    /* Return The Method Call Result */
-//                    /* ### Just For Now */
-//                    out.writeObject("Remote Method Call Succeeded!");
-//                    out.writeObject(return_value);
-//                }
-//                catch (InvocationTargetException e){//(IllegalAccessException | InvocationTargetException e){
-//                    /* Send Back the Exception to Client
-//                     * If the remote method raises an exception,
-//                     * the Stub must raise the same exception,
-//                     * */
-//                    out.writeObject("Remote Method Call Failed!");
-//                    out.writeObject(e.getTargetException());
-//                }
-//
-//            }
-//            catch(Exception exception){
-//                /* an exception occurs at the top level in a service thread */
-//                service_error(new RMIException((exception)));
-//            }
-//            finally {
-//                // executed when the try block is exited
-//                /* service method's result has been returned
-//                   Close the Serializable Streams
-//                   Close the Connection
-//                 */
-//                service_thread_list.remove(this);
-//                try{
-//                    if(out != null){
-//                        out.flush();
-//                        out.close();
-//                    }
-//                }
-//                catch (IOException e){
-//                    System.out.println("Out Stream");
-//                    e.printStackTrace();
-//                }
-//                try{
-//                    if(in != null){
-//                        in.close();
-//                    }
-//                }
-//                catch (IOException e){
-//                    System.out.println("In Stream");
-//                    e.printStackTrace();
-//                }
-//                try{
-//                    this.connection.close();
-//                }
-//                catch (IOException e){
-//                    System.out.println("Connection Close");
-//                    e.printStackTrace();
-//                }
-//            }
-//
-//
-//        }
-//
-//    }
 
     /** Creates a <code>Skeleton</code> with no initial server address. The
         address will be determined by the system when <code>start</code> is
@@ -299,13 +109,13 @@ public class Skeleton<T>
      */
     public Skeleton(Class<T> c, T server)
     {
-        System.out.println("For Debug: Skeleton Construct without address Called!" );
+//        System.out.println("For Debug: Skeleton Construct without address Called!" );
         /* If either of c or server is null */
         if(c == null || server == null)throw new  NullPointerException();
 
         /* Check if c is remote interface */
         if(!isRemoteInterface(c)) throw new  Error("Interface: "+c.getSimpleName()+" does not represent a remote interface");
-        //        throw new UnsupportedOperationException("not implemented");
+
         this.remote_interface_c = c;
         remoteObject = server;
         skeleton_address = null;
@@ -331,13 +141,13 @@ public class Skeleton<T>
      */
     public Skeleton(Class<T> c, T server, InetSocketAddress address)
     {
-        System.out.println("For Debug: Skeleton Construct with address Called! "+address.toString());
+//        System.out.println("For Debug: Skeleton Construct with address Called! "+address.toString());
         /* If either of c or server is null */
         if(c == null || server == null)throw new  NullPointerException();
 
         /* Check if c is remote interface */
         if(!isRemoteInterface(c)) throw new  Error("Interface: "+c.getSimpleName()+" does not represent a remote interface");
-        //        throw new UnsupportedOperationException("not implemented");
+
         this.remote_interface_c = c;
         remoteObject = server;
         skeleton_address = address;
@@ -462,11 +272,11 @@ public class Skeleton<T>
                 int max = 65535;
                 Random rand = new Random();
                 int port_number = rand.nextInt(max) + 1;
-                skeleton_address = new InetSocketAddress(port_number);
-//                String localIp = InetAddress.getLocalHost().getHostAddress();
+//                skeleton_address = new InetSocketAddress(port_number);
+                String localIp = InetAddress.getLocalHost().getHostAddress();
                 // Get some free port and assign: moving with this
 //                serverSocket = new ServerSocket(0);
-//                skeleton_address = new InetSocketAddress(localIp, port_number);
+                skeleton_address = new InetSocketAddress(localIp, port_number);
                 System.out.println("Skeleton Server Address(port): "+skeleton_address.getPort());
             }
 //            else{
@@ -509,9 +319,6 @@ public class Skeleton<T>
                 listener.terminate();
                 listener.join();
                 /* Stop the Skeleton Server */
-//                    if(!skeleton_server_socket.isClosed()){
-//                        skeleton_server_socket.close();
-//                    }
                 /* Wait for Service Threads to Finish
                  * stopped is called Here.
                  * Pass "null" cause Here for skeleton stopped normally.
@@ -523,8 +330,6 @@ public class Skeleton<T>
            }
         }
         System.out.println("For Debug: Stop Ended");
-
-//        throw new UnsupportedOperationException("not implemented");
     }
 
 }

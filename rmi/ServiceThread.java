@@ -58,12 +58,24 @@ public class ServiceThread<T> extends Thread{
                  * on the specified object (object implementing remote Interface) with the specified parameters
                  * */
             try{
+                    /* Invoke Remote Method Call */
                 Object return_value = method.invoke(skeleton.remoteObject, args);
 
                     /* Return The Method Call Result */
-                    /* ### Just For Now */
+
                 out.writeObject("Remote Method Call Succeeded!");
-                out.writeObject(return_value);
+                if(skeleton.isRemoteInterface(return_type)){
+                    /* Passing Stubs as Return Values
+                     * Here 'return_value' will Act as Remote Object Implementing Remote Interface 'return_type'
+                     * And Using Random Address Here*/
+                    Skeleton result_skeleton = new Skeleton(return_type, return_value);
+                    result_skeleton.start();
+                    Object return_stub = Stub.create(return_type, result_skeleton.getSkeleton_address());
+                    out.writeObject(return_stub);
+                }
+                else{
+                    out.writeObject(return_value);
+                }
             }
             catch (InvocationTargetException e){//(IllegalAccessException | InvocationTargetException e){
                     /* Send Back the Exception to Client
@@ -93,7 +105,7 @@ public class ServiceThread<T> extends Thread{
                 }
             }
             catch (IOException e){
-                System.out.println("Out Stream");
+                System.out.println("Out Stream Close Exception");
                 e.printStackTrace();
             }
             try{
@@ -102,7 +114,7 @@ public class ServiceThread<T> extends Thread{
                 }
             }
             catch (IOException e){
-                System.out.println("In Stream");
+                System.out.println("In Stream Close Exception");
                 e.printStackTrace();
             }
             try{

@@ -47,6 +47,7 @@ public  class ListenerThread<T> extends Thread{
                            And Create Service Thread to handle the Remote Method Call When connections areaccepted.
                          */
                     Socket connection = this.socket.accept();
+                    System.out.println("New Connection!");
                     ServiceThread<T> service_thread = new ServiceThread(connection, this.skeleton);
                     service_thread.start();
                 }

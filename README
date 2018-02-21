@@ -1,3 +1,28 @@
+# Lab Authors
+    Zeyu Sun (andrewID: zeyus) & Chenxuan Weng (andrewID: chenxuaw)
+
+# 'rmi' package brief
+    'Skeleton' and 'Stub' are implemented according to the provided documents.
+    'ListenerThread' implements the listening thread at Skeleton server side, accepting connections from client(Stub)
+    'ServiceThread' acts as handler to read and parse method calls(name & arguments) forwarded by Stub Object
+    'StubInvocationHandler' is related to Proxy class, every proxy object has a reference to an invocation handler,
+     whose 'invoke' method is called whenever a method is called on the proxy object.
+
+# about 'PingPongTest'
+    > How to Run ? (Provide an example Below)
+        1. Upload the whole project folder ('DS_project1') to Shark Machine:
+            $ scp -r DS_project1 andrewid@shark.ics.cs.cmu.edu:~/private/private_folder
+        2. Log into Shark Machine, locate the folder uploaded
+            $ make clean
+            $ make
+            (Then you can actually type in '$ make test' to do the run all original test cases.
+        3. Run the PingPongTest.ServerDriver on one Shark Machine (say 'lemonshark' here, and Use port number: 8080)
+            $ java PingPongTest.ServerDriver 8080
+        4. Then Run 'PingPongTest.PingPongClient' on another Shark Machine (say 'houndshark' here)
+            $ java PingPongTest.PingPongClient lemonshark.ics.cs.cmu.edu 8080
+        5. Then The Testing Result will be output on the Client Side
+
+
 MAKEFILE TARGETS
 
 To compile all Java files, execute
